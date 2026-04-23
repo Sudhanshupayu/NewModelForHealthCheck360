@@ -47,6 +47,51 @@ class HealthCheckBot {
                 this.sendMessage();
             }
         });
+
+        // Event delegation for Copy buttons inside code blocks
+        this.messagesContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('.copy-btn');
+            if (!btn) return;
+            const targetId = btn.dataset.target;
+            const codeEl = document.getElementById(targetId);
+            if (!codeEl) return;
+            this.copyToClipboard(codeEl.innerText, btn);
+        });
+    }
+
+    copyToClipboard(text, buttonEl) {
+        const setCopied = () => {
+            const label = buttonEl.querySelector('.copy-label');
+            if (!label) return;
+            const original = label.textContent;
+            label.textContent = 'Copied!';
+            buttonEl.classList.add('copied');
+            setTimeout(() => {
+                label.textContent = original;
+                buttonEl.classList.remove('copied');
+            }, 1500);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(setCopied).catch(() => {
+                this._legacyCopy(text);
+                setCopied();
+            });
+        } else {
+            this._legacyCopy(text);
+            setCopied();
+        }
+    }
+
+    _legacyCopy(text) {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (_) {}
+        document.body.removeChild(ta);
     }
     
     connectWebSocket() {
@@ -187,23 +232,66 @@ class HealthCheckBot {
         this.scrollToBottom();
     }
     
-    formatMessage(content) {
-        // Convert markdown-like formatting to HTML
-        let formatted = content
-            // Escape HTML
+    escapeHtml(str) {
+        return str
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    formatMessage(content) {
+        // Extract fenced code blocks first so we don't HTML-escape their content
+        // or apply inline-markdown rules inside code.
+        const codeBlocks = [];
+        const placeholder = (i) => `__CODEBLOCK_${i}__`;
+        const fenceRegex = /```([a-zA-Z0-9_+-]*)\n?([\s\S]*?)```/g;
+
+        let preProcessed = content.replace(fenceRegex, (match, lang, code) => {
+            const idx = codeBlocks.length;
+            codeBlocks.push({ lang: (lang || 'plaintext').toLowerCase(), code: code.replace(/\n$/, '') });
+            return placeholder(idx);
+        });
+
+        // Escape HTML on the non-code portion, then apply simple markdown.
+        preProcessed = this.escapeHtml(preProcessed)
             // Bold
             .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-            // Italic
-            .replace(/\*(.+?)\*/g, '<em>$1</em>')
-            // Code
-            .replace(/`(.+?)`/g, '<code>$1</code>')
+            // Italic (avoid matching inside ** by requiring non-space start)
+            .replace(/(^|[^*])\*([^*\n]+?)\*/g, '$1<em>$2</em>')
+            // Inline code
+            .replace(/`([^`\n]+?)`/g, '<code class="inline-code">$1</code>')
             // Line breaks
             .replace(/\n/g, '<br>');
-        
-        return formatted;
+
+        // Re-insert code blocks as rendered HTML
+        preProcessed = preProcessed.replace(/__CODEBLOCK_(\d+)__/g, (m, iStr) => {
+            const i = parseInt(iStr, 10);
+            return this.renderCodeBlock(codeBlocks[i].lang, codeBlocks[i].code);
+        });
+
+        return preProcessed;
+    }
+
+    renderCodeBlock(lang, code) {
+        const escaped = this.escapeHtml(code);
+        const langLabel = lang && lang !== 'plaintext' ? lang : 'code';
+        const blockId = 'cb_' + Math.random().toString(36).slice(2, 10);
+        return `
+<div class="code-block" data-lang="${this.escapeHtml(lang)}">
+  <div class="code-block-header">
+    <span class="code-lang">${this.escapeHtml(langLabel)}</span>
+    <button class="copy-btn" type="button" data-target="${blockId}" aria-label="Copy code">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+      <span class="copy-label">Copy</span>
+    </button>
+  </div>
+  <pre class="code-block-body"><code id="${blockId}">${escaped}</code></pre>
+</div>`;
     }
     
     showThinkingIndicator() {

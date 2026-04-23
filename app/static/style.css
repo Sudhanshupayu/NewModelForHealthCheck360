@@ -380,7 +380,8 @@ html, body {
     font-weight: 600;
 }
 
-.message-text code {
+.message-text code.inline-code,
+.message-text > code {
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
     font-size: 0.9em;
     padding: 2px 6px;
@@ -388,8 +389,107 @@ html, body {
     border-radius: 4px;
 }
 
-.message.user .message-text code {
+.message.user .message-text code.inline-code,
+.message.user .message-text > code {
     background: rgba(255, 255, 255, 0.15);
+}
+
+/* Code Block (```fenced```) */
+.code-block {
+    margin: 12px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1e293b;
+    border: 1px solid #334155;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Courier New', monospace;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: #0f172a;
+    border-bottom: 1px solid #334155;
+    font-size: 12px;
+}
+
+.code-lang {
+    color: #94a3b8;
+    text-transform: lowercase;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+.copy-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid #334155;
+    color: #cbd5e1;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.copy-btn:hover {
+    background: #334155;
+    color: #f8fafc;
+    border-color: #475569;
+}
+
+.copy-btn.copied {
+    background: #059669;
+    border-color: #10b981;
+    color: #ffffff;
+}
+
+.copy-btn svg {
+    flex-shrink: 0;
+}
+
+.code-block-body {
+    margin: 0;
+    padding: 12px 14px;
+    overflow-x: auto;
+    color: #e2e8f0;
+    font-size: 13px;
+    line-height: 1.55;
+    background: transparent;
+    white-space: pre;
+}
+
+.code-block-body code {
+    background: transparent !important;
+    padding: 0 !important;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    white-space: pre;
+    display: block;
+}
+
+.code-block-body::-webkit-scrollbar {
+    height: 8px;
+}
+
+.code-block-body::-webkit-scrollbar-track {
+    background: #0f172a;
+}
+
+.code-block-body::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+
+.message.user .code-block {
+    background: #0f172a;
+    border-color: #1e293b;
 }
 
 /* Scrollbar */
